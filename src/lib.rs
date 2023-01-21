@@ -1,22 +1,25 @@
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+
 mod contract;
-mod error;
-mod msg;
+pub mod error;
+pub mod msg;
+#[cfg(any(test, feature = "tests"))]
 pub mod multitest;
+mod state;
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
-use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: InstantiateMsg,
+    info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    Ok(Response::new())
+    contract::instantiate(deps, info, msg)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
