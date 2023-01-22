@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct State {
     pub owner: Addr,
+    pub max_bid: Uint128,
 }
 
 pub const STATE: Item<State> = Item::new("state");

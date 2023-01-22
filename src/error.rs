@@ -5,4 +5,10 @@ use thiserror::Error;
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("Unexpected error")]
+    Unexpected {},
+
+    #[error("Bid is not enough to beat the max bid")]
+    BidTooSmall {},
 }

@@ -33,7 +33,7 @@ pub fn execute(
     use msg::ExecMsg::*;
 
     match msg {
-        Bid {} => exec::bid(deps, info).map_err(ContractError::Std),
+        Bid {} => exec::bid(deps, info),
     }
 }
 
