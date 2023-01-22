@@ -1,6 +1,6 @@
 use crate::msg::InstantiateMsg;
 use crate::state::{State, STATE};
-use cosmwasm_std::{DepsMut, MessageInfo, Response, StdResult, Uint128};
+use cosmwasm_std::{DepsMut, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -19,7 +19,7 @@ pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> Std
         deps.storage,
         &State {
             owner,
-            max_bid: Uint128::new(0),
+            max_bid: None,
         },
     )?;
 
@@ -46,11 +46,13 @@ pub mod exec {
         let total_bid = incoming_bid + current_bid;
         let mut state = STATE.load(deps.storage)?;
 
-        if total_bid <= state.max_bid {
-            return Err(ContractError::BidTooSmall {});
+        if let Some(max_bid) = state.max_bid {
+            if total_bid <= max_bid.1 {
+                return Err(ContractError::BidTooSmall {});
+            }
         }
 
-        state.max_bid = total_bid;
+        state.max_bid = Some((info.sender.clone(), total_bid));
         STATE.save(deps.storage, &state)?;
         BIDS.update(
             deps.storage,
@@ -68,13 +70,26 @@ pub mod exec {
 }
 
 pub mod query {
-    use crate::msg::BidResp;
-    use crate::state::BIDS;
+    use crate::msg::{BidResp, HighestResp};
+    use crate::state::{BIDS, STATE};
     use cosmwasm_std::{Deps, StdResult};
 
     pub fn bid(deps: Deps, address: String) -> StdResult<BidResp> {
         let address = deps.api.addr_validate(&address)?;
         let balance = BIDS.may_load(deps.storage, &address)?.unwrap_or_default();
         Ok(BidResp { balance })
+    }
+
+    pub fn highest(deps: Deps) -> StdResult<Option<HighestResp>> {
+        let state = STATE.load(deps.storage)?;
+        let max_bid = match state.max_bid {
+            Some(max_bid) => Some(HighestResp {
+                address: max_bid.0,
+                amount: max_bid.1,
+            }),
+            None => None,
+        };
+
+        Ok(max_bid)
     }
 }

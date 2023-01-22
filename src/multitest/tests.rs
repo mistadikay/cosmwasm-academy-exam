@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::msg::BidResp;
+use crate::msg::{BidResp, HighestResp};
 use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::App;
 
@@ -25,6 +25,51 @@ fn query_bid() {
             balance: Uint128::new(0)
         }
     )
+}
+
+#[test]
+fn query_highest_bid() {
+    let owner = Addr::unchecked("owner");
+    let sender = Addr::unchecked("sender");
+    let sender2 = Addr::unchecked("sender2");
+    let mut app = App::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &sender, coins(100, ATOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &sender2, coins(100, ATOM))
+            .unwrap();
+    });
+    let code_id = BiddingContract::store_code(&mut app);
+
+    let contract =
+        BiddingContract::instantiate(&mut app, code_id, &owner, "Bidding contract", None, None)
+            .unwrap();
+
+    let resp = contract.query_highest_bid(&app).unwrap();
+    assert_eq!(resp, None);
+
+    contract.bid(&mut app, &sender, &coins(10, ATOM)).unwrap();
+    let resp = contract.query_highest_bid(&app).unwrap();
+    assert_eq!(
+        resp,
+        Some(HighestResp {
+            address: sender.clone(),
+            amount: Uint128::new(10)
+        })
+    );
+
+    contract.bid(&mut app, &sender2, &coins(11, ATOM)).unwrap();
+    let resp = contract.query_highest_bid(&app).unwrap();
+    assert_eq!(
+        resp,
+        Some(HighestResp {
+            address: sender2.clone(),
+            amount: Uint128::new(11)
+        })
+    );
 }
 
 #[test]

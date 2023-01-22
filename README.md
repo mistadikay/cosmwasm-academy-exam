@@ -49,6 +49,6 @@ The `cw_storage_plus::Map<Key, Value>` utility would be a great tool to keep tot
 - [ ] add retract {} execute entry point allowing to retract funds for those who didn't win the bid
 - [ ] implement an optional receiver in retract {} to allow transferring funds to another person
 - [x] implement bid {} query returning current bid by address
-- [ ] implement highest {} query returning the highest (winning) bid (who and how much)
+- [x] implement highest {} query returning the highest (winning) bid (who and how much)
 - [ ] implement closed {} query returning if bidding is closed
 - [ ] implement winner {} query returning the winner if the bidding is closed
