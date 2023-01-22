@@ -24,12 +24,17 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: msg::ExecMsg,
+    info: MessageInfo,
+    msg: msg::ExecMsg,
 ) -> Result<Response, ContractError> {
-    Ok(Response::new())
+    use contract::exec;
+    use msg::ExecMsg::*;
+
+    match msg {
+        Bid {} => exec::bid(deps, info).map_err(ContractError::Std),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -38,6 +43,6 @@ pub fn query(deps: Deps, _env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
     use msg::QueryMsg::*;
 
     match msg {
-        Bid {} => to_binary(&query::bid(deps)?),
+        Bid { address } => to_binary(&query::bid(deps, address)?),
     }
 }

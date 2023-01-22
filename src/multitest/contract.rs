@@ -1,7 +1,9 @@
-use crate::msg::InstantiateMsg;
-use crate::{execute, instantiate, query};
-use cosmwasm_std::{Addr, StdResult};
+use cosmwasm_std::{Addr, Coin, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
+
+use crate::error::ContractError;
+use crate::msg::{BidResp, ExecMsg, InstantiateMsg, QueryMsg};
+use crate::{execute, instantiate, query};
 
 pub struct BiddingContract(Addr);
 
@@ -36,5 +38,24 @@ impl BiddingContract {
         )
         .map(BiddingContract)
         .map_err(|err| err.downcast().unwrap())
+    }
+
+    #[track_caller]
+    pub fn bid(&self, app: &mut App, sender: &Addr, funds: &[Coin]) -> Result<(), ContractError> {
+        app.execute_contract(sender.clone(), self.0.clone(), &ExecMsg::Bid {}, funds)
+            .map_err(|err| err.downcast().unwrap())
+            .map(|_| ())
+    }
+
+    #[track_caller]
+    pub fn query_bid(&self, app: &App, address: String) -> StdResult<BidResp> {
+        app.wrap()
+            .query_wasm_smart(self.0.clone(), &QueryMsg::Bid { address })
+    }
+}
+
+impl From<BiddingContract> for Addr {
+    fn from(contract: BiddingContract) -> Self {
+        contract.0
     }
 }

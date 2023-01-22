@@ -42,13 +42,13 @@ The `cw_storage_plus::Map<Key, Value>` utility would be a great tool to keep tot
 ## Implementation steps
 
 - [x] implement initiation with an optional contract owner
-- [ ] add bid {} execute entry point allowing to submit a bid by anyone and stored in a contract state
+- [x] add bid {} execute entry point allowing to submit a bid by anyone and stored in a contract state
 - [ ] implement ability to increase a bid
 - [ ] implement commission to the future bid winner when submitting a bid
 - [ ] add close {} execute entry point allowing an owner to close the bid
 - [ ] add retract {} execute entry point allowing to retract funds for those who didn't win the bid
 - [ ] implement an optional receiver in retract {} to allow transferring funds to another person
-- [ ] implement bid {} query returning current bid by address
+- [x] implement bid {} query returning current bid by address
 - [ ] implement highest {} query returning the highest (winning) bid (who and how much)
 - [ ] implement closed {} query returning if bidding is closed
 - [ ] implement winner {} query returning the winner if the bidding is closed
