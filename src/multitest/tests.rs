@@ -260,7 +260,7 @@ fn close() {
         .u128();
     assert_eq!(balance2, 10);
 
-    let err = contract.retract(&mut app, &sender1).unwrap_err();
+    let err = contract.retract(&mut app, &sender1, None).unwrap_err();
     assert_eq!(err, ContractError::BidMissing {});
 }
 
@@ -269,6 +269,8 @@ fn retract() {
     let owner = Addr::unchecked("owner");
     let sender1 = Addr::unchecked("sender1");
     let sender2 = Addr::unchecked("sender2");
+    let sender3 = Addr::unchecked("sender3");
+    let receiver = Addr::unchecked("receiver");
 
     let mut app = App::new(|router, _api, storage| {
         router
@@ -279,6 +281,10 @@ fn retract() {
             .bank
             .init_balance(storage, &sender2, coins(20, ATOM))
             .unwrap();
+        router
+            .bank
+            .init_balance(storage, &sender3, coins(20, ATOM))
+            .unwrap();
     });
     let code_id = BiddingContract::store_code(&mut app);
 
@@ -288,21 +294,34 @@ fn retract() {
 
     contract.bid(&mut app, &sender1, &coins(5, ATOM)).unwrap();
     contract.bid(&mut app, &sender2, &coins(10, ATOM)).unwrap();
+    contract.bid(&mut app, &sender3, &coins(11, ATOM)).unwrap();
 
-    let err = contract.retract(&mut app, &sender1).unwrap_err();
+    let err = contract.retract(&mut app, &sender1, None).unwrap_err();
     assert_eq!(err, ContractError::BiddingNotClosed {});
 
     contract.close(&mut app, &owner).unwrap();
-    contract.retract(&mut app, &sender1).unwrap();
+    contract.retract(&mut app, &sender1, None).unwrap();
+    assert_eq!(
+        app.wrap()
+            .query_balance(sender1.clone(), ATOM)
+            .unwrap()
+            .amount
+            .u128(),
+        20
+    );
 
-    let balance = app
-        .wrap()
-        .query_balance(sender1.clone(), ATOM)
-        .unwrap()
-        .amount
-        .u128();
-    assert_eq!(balance, 20);
+    contract
+        .retract(&mut app, &sender2, Some(receiver.to_string()))
+        .unwrap();
+    assert_eq!(
+        app.wrap()
+            .query_balance(receiver.clone(), ATOM)
+            .unwrap()
+            .amount
+            .u128(),
+        10
+    );
 
-    let err = contract.retract(&mut app, &sender1).unwrap_err();
+    let err = contract.retract(&mut app, &sender1, None).unwrap_err();
     assert_eq!(err, ContractError::BidMissing {});
 }

@@ -35,7 +35,7 @@ pub fn execute(
     match msg {
         Bid {} => exec::bid(deps, info),
         Close {} => exec::close(deps, info),
-        Retract {} => exec::retract(deps, info),
+        Retract { address } => exec::retract(deps, info, address),
     }
 }
 

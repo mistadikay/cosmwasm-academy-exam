@@ -80,7 +80,11 @@ pub mod exec {
             .add_attribute("total_bid", total_bid))
     }
 
-    pub fn retract(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    pub fn retract(
+        deps: DepsMut,
+        info: MessageInfo,
+        address: Option<String>,
+    ) -> Result<Response, ContractError> {
         let state = STATE.load(deps.storage)?;
 
         if !state.closed {
@@ -91,10 +95,18 @@ pub mod exec {
 
         let current_bid = BIDS.may_load(deps.storage, &info.sender)?;
         match current_bid {
-            Some(bid) => messages.push(BankMsg::Send {
-                to_address: info.sender.to_string(),
-                amount: coins(u128::from(bid), DENOM),
-            }),
+            Some(bid) => {
+                let mut to_address = info.sender.clone();
+
+                if let Some(address) = address {
+                    to_address = deps.api.addr_validate(&address).unwrap_or(to_address);
+                }
+
+                messages.push(BankMsg::Send {
+                    to_address: to_address.to_string(),
+                    amount: coins(u128::from(bid), DENOM),
+                })
+            }
             None => return Err(BidMissing {}),
         }
 

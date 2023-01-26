@@ -55,10 +55,20 @@ impl BiddingContract {
     }
 
     #[track_caller]
-    pub fn retract(&self, app: &mut App, sender: &Addr) -> Result<(), ContractError> {
-        app.execute_contract(sender.clone(), self.0.clone(), &ExecMsg::Retract {}, &[])
-            .map_err(|err| err.downcast().unwrap())
-            .map(|_| ())
+    pub fn retract(
+        &self,
+        app: &mut App,
+        sender: &Addr,
+        address: Option<String>,
+    ) -> Result<(), ContractError> {
+        app.execute_contract(
+            sender.clone(),
+            self.0.clone(),
+            &ExecMsg::Retract { address },
+            &[],
+        )
+        .map_err(|err| err.downcast().unwrap())
+        .map(|_| ())
     }
 
     #[track_caller]
