@@ -51,4 +51,4 @@ The `cw_storage_plus::Map<Key, Value>` utility would be a great tool to keep tot
 - [x] implement bid {} query returning current bid by address
 - [x] implement highest {} query returning the highest (winning) bid (who and how much)
 - [x] implement closed {} query returning if bidding is closed
-- [ ] implement winner {} query returning the winner if the bidding is closed
+- [x] implement winner {} query returning the winner if the bidding is closed

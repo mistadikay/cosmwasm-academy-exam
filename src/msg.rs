@@ -17,6 +17,9 @@ pub enum QueryMsg {
 
     #[returns(ClosedResp)]
     Closed {},
+
+    #[returns(WinnerResp)]
+    Winner {},
 }
 
 #[cw_serde]
@@ -39,4 +42,9 @@ pub struct HighestResp {
 #[cw_serde]
 pub struct ClosedResp {
     pub closed: bool,
+}
+
+#[cw_serde]
+pub struct WinnerResp {
+    pub winner: Option<HighestResp>,
 }

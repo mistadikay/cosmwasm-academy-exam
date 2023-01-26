@@ -106,7 +106,7 @@ pub mod exec {
 }
 
 pub mod query {
-    use crate::msg::{BidResp, ClosedResp, HighestResp};
+    use crate::msg::{BidResp, ClosedResp, HighestResp, WinnerResp};
     use crate::state::{BIDS, STATE};
     use cosmwasm_std::{Deps, StdResult};
 
@@ -127,6 +127,22 @@ pub mod query {
         };
 
         Ok(max_bid)
+    }
+
+    pub fn winner(deps: Deps) -> StdResult<WinnerResp> {
+        let state = STATE.load(deps.storage)?;
+        let mut winner = None;
+
+        if state.closed {
+            if let Some(max_bid) = state.max_bid {
+                winner = Some(HighestResp {
+                    address: max_bid.0,
+                    amount: max_bid.1,
+                });
+            }
+        }
+
+        Ok(WinnerResp { winner })
     }
 
     pub fn closed(deps: Deps) -> StdResult<ClosedResp> {

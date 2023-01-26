@@ -90,6 +90,41 @@ fn query_highest_bid() {
 }
 
 #[test]
+fn query_winner() {
+    let owner = Addr::unchecked("owner");
+    let sender = Addr::unchecked("sender");
+    let mut app = App::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &sender, coins(100, ATOM))
+            .unwrap();
+    });
+    let code_id = BiddingContract::store_code(&mut app);
+
+    let contract =
+        BiddingContract::instantiate(&mut app, code_id, &owner, "Bidding contract", None, None)
+            .unwrap();
+
+    let resp = contract.query_winner(&app).unwrap().winner;
+    assert_eq!(resp, None);
+
+    contract.bid(&mut app, &sender, &coins(10, ATOM)).unwrap();
+    let resp = contract.query_winner(&app).unwrap().winner;
+    assert_eq!(resp, None);
+
+    contract.close(&mut app, &owner).unwrap();
+
+    let resp = contract.query_winner(&app).unwrap().winner;
+    assert_eq!(
+        resp,
+        Some(HighestResp {
+            address: sender.clone(),
+            amount: Uint128::new(10)
+        })
+    );
+}
+
+#[test]
 fn bid_with_funds() {
     let owner = Addr::unchecked("owner");
     let sender = Addr::unchecked("sender");
