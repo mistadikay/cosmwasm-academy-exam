@@ -14,4 +14,7 @@ pub enum ContractError {
 
     #[error("Bid is not enough to beat the max bid")]
     BidTooSmall {},
+
+    #[error("Biding is already closed")]
+    BiddingClosed {},
 }

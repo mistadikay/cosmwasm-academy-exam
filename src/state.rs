@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct State {
+    pub closed: bool,
     pub owner: Addr,
     pub max_bid: Option<(Addr, Uint128)>,
 }

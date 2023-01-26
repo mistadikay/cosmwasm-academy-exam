@@ -18,6 +18,7 @@ pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> Std
     STATE.save(
         deps.storage,
         &State {
+            closed: false,
             owner,
             max_bid: None,
         },
@@ -29,7 +30,9 @@ pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> Std
 pub mod exec {
     use crate::contract::DENOM;
     use crate::error::ContractError;
-    use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, StdResult, Uint128};
+    use cosmwasm_std::{
+        coins, BankMsg, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128,
+    };
 
     use crate::state::{BIDS, STATE};
 
@@ -37,6 +40,10 @@ pub mod exec {
         let mut state = STATE.load(deps.storage)?;
         if info.sender.clone() == state.owner {
             return Err(ContractError::Unauthorized {});
+        }
+
+        if state.closed {
+            return Err(ContractError::BiddingClosed {});
         }
 
         let incoming_bid = info
@@ -70,6 +77,31 @@ pub mod exec {
             .add_attribute("action", "bid")
             .add_attribute("sender", info.sender.as_str())
             .add_attribute("total_bid", total_bid))
+    }
+
+    pub fn close(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+        let mut state = STATE.load(deps.storage)?;
+        if info.sender.clone() != state.owner {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        if state.closed {
+            return Err(ContractError::BiddingClosed {});
+        }
+
+        if let Some(ref max_bid) = state.max_bid {
+            state.closed = true;
+            STATE.save(deps.storage, &state)?;
+
+            let messages = vec![BankMsg::Send {
+                to_address: max_bid.0.to_string(),
+                amount: coins(u128::from(max_bid.1), DENOM),
+            }];
+
+            return Ok(Response::new().add_messages(messages));
+        }
+
+        Ok(Response::default())
     }
 }
 

@@ -153,3 +153,58 @@ fn bid_too_small() {
         }
     );
 }
+
+#[test]
+fn close() {
+    let owner = Addr::unchecked("owner");
+    let sender1 = Addr::unchecked("sender1");
+    let sender2 = Addr::unchecked("sender2");
+
+    let mut app = App::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &sender1, coins(20, ATOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &sender2, coins(20, ATOM))
+            .unwrap();
+    });
+    let code_id = BiddingContract::store_code(&mut app);
+
+    let contract =
+        BiddingContract::instantiate(&mut app, code_id, &owner, "Bidding contract", None, None)
+            .unwrap();
+
+    contract.bid(&mut app, &sender1, &coins(5, ATOM)).unwrap();
+    contract.bid(&mut app, &sender2, &coins(10, ATOM)).unwrap();
+    contract.bid(&mut app, &sender1, &coins(6, ATOM)).unwrap();
+
+    let err = contract.close(&mut app, &sender2).unwrap_err();
+    assert_eq!(err, ContractError::Unauthorized {});
+
+    contract.close(&mut app, &owner).unwrap();
+
+    let err = contract
+        .bid(&mut app, &sender1, &coins(1, ATOM))
+        .unwrap_err();
+    assert_eq!(err, ContractError::BiddingClosed {});
+
+    let err = contract.close(&mut app, &owner).unwrap_err();
+    assert_eq!(err, ContractError::BiddingClosed {});
+
+    let balance1 = app
+        .wrap()
+        .query_balance(sender1, ATOM)
+        .unwrap()
+        .amount
+        .u128();
+    assert_eq!(balance1, 20);
+    let balance2 = app
+        .wrap()
+        .query_balance(sender2, ATOM)
+        .unwrap()
+        .amount
+        .u128();
+    assert_eq!(balance2, 10);
+}
