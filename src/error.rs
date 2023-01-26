@@ -17,4 +17,10 @@ pub enum ContractError {
 
     #[error("Biding is already closed")]
     BiddingClosed {},
+
+    #[error("Biding is not closed yet")]
+    BiddingNotClosed {},
+
+    #[error("There is no bid")]
+    BidMissing {},
 }

@@ -260,3 +260,46 @@ fn close() {
         .u128();
     assert_eq!(balance2, 10);
 }
+
+#[test]
+fn retract() {
+    let owner = Addr::unchecked("owner");
+    let sender1 = Addr::unchecked("sender1");
+    let sender2 = Addr::unchecked("sender2");
+
+    let mut app = App::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &sender1, coins(20, ATOM))
+            .unwrap();
+        router
+            .bank
+            .init_balance(storage, &sender2, coins(20, ATOM))
+            .unwrap();
+    });
+    let code_id = BiddingContract::store_code(&mut app);
+
+    let contract =
+        BiddingContract::instantiate(&mut app, code_id, &owner, "Bidding contract", None, None)
+            .unwrap();
+
+    contract.bid(&mut app, &sender1, &coins(5, ATOM)).unwrap();
+    contract.bid(&mut app, &sender2, &coins(10, ATOM)).unwrap();
+
+    let err = contract.retract(&mut app, &sender1).unwrap_err();
+    assert_eq!(err, ContractError::BiddingNotClosed {});
+
+    contract.close(&mut app, &owner).unwrap();
+    contract.retract(&mut app, &sender1).unwrap();
+
+    let balance = app
+        .wrap()
+        .query_balance(sender1.clone(), ATOM)
+        .unwrap()
+        .amount
+        .u128();
+    assert_eq!(balance, 20);
+
+    let err = contract.retract(&mut app, &sender1).unwrap_err();
+    assert_eq!(err, ContractError::BidMissing {});
+}

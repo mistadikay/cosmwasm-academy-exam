@@ -26,6 +26,7 @@ pub enum QueryMsg {
 pub enum ExecMsg {
     Bid {},
     Close {},
+    Retract {},
 }
 
 #[cw_serde]

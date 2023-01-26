@@ -30,6 +30,7 @@ pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> Std
 pub mod exec {
     use crate::contract::DENOM;
     use crate::error::ContractError;
+    use crate::error::ContractError::BidMissing;
     use cosmwasm_std::{
         coins, BankMsg, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128,
     };
@@ -77,6 +78,29 @@ pub mod exec {
             .add_attribute("action", "bid")
             .add_attribute("sender", info.sender.as_str())
             .add_attribute("total_bid", total_bid))
+    }
+
+    pub fn retract(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+        let state = STATE.load(deps.storage)?;
+
+        if !state.closed {
+            return Err(ContractError::BiddingNotClosed {});
+        }
+
+        let mut messages = vec![];
+
+        let current_bid = BIDS.may_load(deps.storage, &info.sender)?;
+        match current_bid {
+            Some(bid) => messages.push(BankMsg::Send {
+                to_address: info.sender.to_string(),
+                amount: coins(u128::from(bid), DENOM),
+            }),
+            None => return Err(BidMissing {}),
+        }
+
+        BIDS.remove(deps.storage, &info.sender);
+
+        Ok(Response::new().add_messages(messages))
     }
 
     pub fn close(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
