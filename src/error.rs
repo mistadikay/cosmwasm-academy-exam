@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("Unexpected error")]
     Unexpected {},
 
+    #[error("Unauthorized action")]
+    Unauthorized {},
+
     #[error("Bid is not enough to beat the max bid")]
     BidTooSmall {},
 }

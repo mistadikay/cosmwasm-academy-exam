@@ -80,6 +80,10 @@ fn bid_with_funds() {
     let mut app = App::new(|router, _api, storage| {
         router
             .bank
+            .init_balance(storage, &owner, coins(10, ATOM))
+            .unwrap();
+        router
+            .bank
             .init_balance(storage, &sender, coins(10, ATOM))
             .unwrap();
     });
@@ -98,6 +102,9 @@ fn bid_with_funds() {
             balance: Uint128::new(5)
         }
     );
+
+    let err = contract.bid(&mut app, &owner, &coins(5, ATOM)).unwrap_err();
+    assert_eq!(err, ContractError::Unauthorized {});
 }
 
 #[test]

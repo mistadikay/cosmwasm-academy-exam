@@ -34,6 +34,11 @@ pub mod exec {
     use crate::state::{BIDS, STATE};
 
     pub fn bid(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+        let mut state = STATE.load(deps.storage)?;
+        if info.sender.clone() == state.owner {
+            return Err(ContractError::Unauthorized {});
+        }
+
         let incoming_bid = info
             .funds
             .iter()
@@ -44,7 +49,6 @@ pub mod exec {
             .may_load(deps.storage, &info.sender)?
             .unwrap_or_default();
         let total_bid = incoming_bid + current_bid;
-        let mut state = STATE.load(deps.storage)?;
 
         if let Some(max_bid) = state.max_bid {
             if total_bid <= max_bid.1 {
