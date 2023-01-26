@@ -28,6 +28,23 @@ fn query_bid() {
 }
 
 #[test]
+fn query_closed() {
+    let owner = Addr::unchecked("owner");
+    let mut app = App::default();
+    let code_id = BiddingContract::store_code(&mut app);
+
+    let contract =
+        BiddingContract::instantiate(&mut app, code_id, &owner, "Bidding contract", None, None)
+            .unwrap();
+
+    assert_eq!(contract.query_closed(&app).unwrap().closed, false);
+
+    contract.close(&mut app, &owner).unwrap();
+
+    assert_eq!(contract.query_closed(&app).unwrap().closed, true);
+}
+
+#[test]
 fn query_highest_bid() {
     let owner = Addr::unchecked("owner");
     let sender = Addr::unchecked("sender");

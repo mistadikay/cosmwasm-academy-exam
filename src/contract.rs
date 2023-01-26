@@ -89,24 +89,24 @@ pub mod exec {
             return Err(ContractError::BiddingClosed {});
         }
 
-        if let Some(ref max_bid) = state.max_bid {
-            state.closed = true;
-            STATE.save(deps.storage, &state)?;
+        state.closed = true;
+        let mut messages = vec![];
 
-            let messages = vec![BankMsg::Send {
+        if let Some(ref max_bid) = state.max_bid {
+            messages.push(BankMsg::Send {
                 to_address: max_bid.0.to_string(),
                 amount: coins(u128::from(max_bid.1), DENOM),
-            }];
-
-            return Ok(Response::new().add_messages(messages));
+            })
         }
 
-        Ok(Response::default())
+        STATE.save(deps.storage, &state)?;
+
+        Ok(Response::new().add_messages(messages))
     }
 }
 
 pub mod query {
-    use crate::msg::{BidResp, HighestResp};
+    use crate::msg::{BidResp, ClosedResp, HighestResp};
     use crate::state::{BIDS, STATE};
     use cosmwasm_std::{Deps, StdResult};
 
@@ -127,5 +127,13 @@ pub mod query {
         };
 
         Ok(max_bid)
+    }
+
+    pub fn closed(deps: Deps) -> StdResult<ClosedResp> {
+        let state = STATE.load(deps.storage)?;
+
+        Ok(ClosedResp {
+            closed: state.closed,
+        })
     }
 }

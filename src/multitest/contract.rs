@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Coin, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
 
 use crate::error::ContractError;
-use crate::msg::{BidResp, ExecMsg, HighestResp, InstantiateMsg, QueryMsg};
+use crate::msg::{BidResp, ClosedResp, ExecMsg, HighestResp, InstantiateMsg, QueryMsg};
 use crate::{execute, instantiate, query};
 
 pub struct BiddingContract(Addr);
@@ -64,6 +64,12 @@ impl BiddingContract {
     pub fn query_highest_bid(&self, app: &App) -> StdResult<Option<HighestResp>> {
         app.wrap()
             .query_wasm_smart(self.0.clone(), &QueryMsg::Highest {})
+    }
+
+    #[track_caller]
+    pub fn query_closed(&self, app: &App) -> StdResult<ClosedResp> {
+        app.wrap()
+            .query_wasm_smart(self.0.clone(), &QueryMsg::Closed {})
     }
 }
 

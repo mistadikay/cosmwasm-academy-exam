@@ -14,6 +14,9 @@ pub enum QueryMsg {
 
     #[returns(HighestResp)]
     Highest {},
+
+    #[returns(ClosedResp)]
+    Closed {},
 }
 
 #[cw_serde]
@@ -31,4 +34,9 @@ pub struct BidResp {
 pub struct HighestResp {
     pub address: Addr,
     pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct ClosedResp {
+    pub closed: bool,
 }
