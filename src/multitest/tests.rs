@@ -247,7 +247,7 @@ fn close() {
 
     let balance1 = app
         .wrap()
-        .query_balance(sender1, ATOM)
+        .query_balance(sender1.clone(), ATOM)
         .unwrap()
         .amount
         .u128();
@@ -259,6 +259,9 @@ fn close() {
         .amount
         .u128();
     assert_eq!(balance2, 10);
+
+    let err = contract.retract(&mut app, &sender1).unwrap_err();
+    assert_eq!(err, ContractError::BidMissing {});
 }
 
 #[test]

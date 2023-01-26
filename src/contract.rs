@@ -117,8 +117,10 @@ pub mod exec {
         let mut messages = vec![];
 
         if let Some(ref max_bid) = state.max_bid {
+            let winner_addr = max_bid.clone().0;
+            BIDS.remove(deps.storage, &winner_addr);
             messages.push(BankMsg::Send {
-                to_address: max_bid.0.to_string(),
+                to_address: winner_addr.to_string(),
                 amount: coins(u128::from(max_bid.1), DENOM),
             })
         }
