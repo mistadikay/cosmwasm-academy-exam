@@ -1,11 +1,12 @@
 use crate::msg::InstantiateMsg;
 use crate::state::{State, STATE};
-use cosmwasm_std::{DepsMut, MessageInfo, Response, StdResult};
+use cosmwasm_std::{DepsMut, MessageInfo, Response, StdResult, Uint128};
 use cw2::set_contract_version;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DENOM: &str = "ATOM";
+const COMMISSION_DEFAULT: u8 = 5;
 
 pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -15,11 +16,14 @@ pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> Std
         owner = deps.api.addr_validate(&owner_addr)?
     }
 
+    let commission_percent = msg.commission_percent.unwrap_or(COMMISSION_DEFAULT);
     STATE.save(
         deps.storage,
         &State {
             closed: false,
             owner,
+            commission_total: Uint128::new(0),
+            commission_percent,
             max_bid: None,
         },
     )?;
@@ -35,7 +39,7 @@ pub mod exec {
         coins, BankMsg, DepsMut, MessageInfo, Response, StdError, StdResult, Uint128,
     };
 
-    use crate::state::{BIDS, STATE};
+    use crate::state::{Bid, BIDS, STATE};
 
     pub fn bid(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
         let mut state = STATE.load(deps.storage)?;
@@ -56,7 +60,7 @@ pub mod exec {
         let current_bid = BIDS
             .may_load(deps.storage, &info.sender)?
             .unwrap_or_default();
-        let total_bid = incoming_bid + current_bid;
+        let total_bid = incoming_bid + current_bid.retractable + current_bid.commission;
 
         if let Some(max_bid) = state.max_bid {
             if total_bid <= max_bid.1 {
@@ -64,15 +68,27 @@ pub mod exec {
             }
         }
 
+        // save new max bid for future comparisons
         state.max_bid = Some((info.sender.clone(), total_bid));
-        STATE.save(deps.storage, &state)?;
+
+        // calculate commission and retractable right away
+        let commission = incoming_bid * Uint128::from(state.commission_percent) / Uint128::new(100);
+        let retractable = incoming_bid - commission;
         BIDS.update(
             deps.storage,
             &info.sender,
-            |balance: Option<Uint128>| -> StdResult<_> {
-                Ok(balance.unwrap_or_default() + incoming_bid)
+            |bid: Option<Bid>| -> StdResult<_> {
+                let bid = bid.unwrap_or_default();
+                Ok(Bid {
+                    commission: bid.commission + commission,
+                    retractable: bid.retractable + retractable,
+                })
             },
         )?;
+
+        // future winning pot
+        state.commission_total += commission;
+        STATE.save(deps.storage, &state)?;
 
         Ok(Response::default()
             .add_attribute("action", "bid")
@@ -104,7 +120,7 @@ pub mod exec {
 
                 messages.push(BankMsg::Send {
                     to_address: to_address.to_string(),
-                    amount: coins(u128::from(bid), DENOM),
+                    amount: coins(u128::from(bid.retractable), DENOM),
                 })
             }
             None => return Err(BidMissing {}),
@@ -116,6 +132,7 @@ pub mod exec {
     }
 
     pub fn close(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+        let mut messages = vec![];
         let mut state = STATE.load(deps.storage)?;
         if info.sender.clone() != state.owner {
             return Err(ContractError::Unauthorized {});
@@ -125,18 +142,25 @@ pub mod exec {
             return Err(ContractError::BiddingClosed {});
         }
 
-        state.closed = true;
-        let mut messages = vec![];
-
+        // if bidding commenced, send funds to the winner
         if let Some(ref max_bid) = state.max_bid {
             let winner_addr = max_bid.clone().0;
-            BIDS.remove(deps.storage, &winner_addr);
-            messages.push(BankMsg::Send {
-                to_address: winner_addr.to_string(),
-                amount: coins(u128::from(max_bid.1), DENOM),
-            })
+            let winner_bid = BIDS.may_load(deps.storage, &winner_addr).unwrap();
+
+            match winner_bid {
+                Some(bid) => {
+                    let jackpot = bid.retractable + state.commission_total;
+                    BIDS.remove(deps.storage, &winner_addr);
+                    messages.push(BankMsg::Send {
+                        to_address: winner_addr.to_string(),
+                        amount: coins(u128::from(jackpot), DENOM),
+                    })
+                }
+                None => return Err(BidMissing {}),
+            }
         }
 
+        state.closed = true;
         STATE.save(deps.storage, &state)?;
 
         Ok(Response::new().add_messages(messages))
@@ -150,8 +174,10 @@ pub mod query {
 
     pub fn bid(deps: Deps, address: String) -> StdResult<BidResp> {
         let address = deps.api.addr_validate(&address)?;
-        let balance = BIDS.may_load(deps.storage, &address)?.unwrap_or_default();
-        Ok(BidResp { balance })
+        let bid = BIDS.may_load(deps.storage, &address)?.unwrap_or_default();
+        Ok(BidResp {
+            bid: bid.retractable + bid.commission,
+        })
     }
 
     pub fn highest(deps: Deps) -> StdResult<Option<HighestResp>> {

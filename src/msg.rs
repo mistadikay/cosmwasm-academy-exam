@@ -4,6 +4,7 @@ use cosmwasm_std::{Addr, Uint128};
 #[cw_serde]
 pub struct InstantiateMsg {
     pub owner: Option<String>,
+    pub commission_percent: Option<u8>,
 }
 
 #[cw_serde]
@@ -31,7 +32,7 @@ pub enum ExecMsg {
 
 #[cw_serde]
 pub struct BidResp {
-    pub balance: Uint128,
+    pub bid: Uint128,
 }
 
 #[cw_serde]

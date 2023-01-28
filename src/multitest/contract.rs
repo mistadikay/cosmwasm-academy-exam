@@ -25,13 +25,17 @@ impl BiddingContract {
         label: &str,
         admin: impl Into<Option<&'a Addr>>,
         owner: Option<String>,
+        commission_percent: Option<u8>,
     ) -> StdResult<Self> {
         let admin = admin.into();
 
         app.instantiate_contract(
             code_id,
             sender.clone(),
-            &InstantiateMsg { owner },
+            &InstantiateMsg {
+                commission_percent,
+                owner,
+            },
             &[],
             label,
             admin.map(Addr::to_string),
